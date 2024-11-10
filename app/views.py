@@ -150,6 +150,7 @@ def data_preprocessing(request):
 
             # Identify the sentence column
             sentence_column, _ = identify_columns(df)
+            print(sentence_column)
             if not sentence_column:
                 return JsonResponse({'error': 'Could not identify the sentence column.'})
 
@@ -183,16 +184,30 @@ def data_preprocessing(request):
 # Helper Functions
 
 def identify_columns(df):
-    """Identify sentence and label columns by analyzing text data."""
+    """
+    Identify sentence and label columns by comparing text length of first row.
+    Longer text is considered the sentence column, shorter text is the label column.
+    """
     sentence_column = None
     label_column = None
 
+    # Get first row text lengths for each column
+    lengths = {}
     for col in df.columns:
-        unique_ratio = df[col].nunique() / len(df)
-        if df[col].dtype == 'O' and unique_ratio < 0.9:  # Likely explanatory
-            sentence_column = col
-        elif unique_ratio >= 0.9:  # Likely output/label
-            label_column = col
+        if df[col].dtype == 'O':  # Only check string columns
+            first_value = str(df[col].iloc[0])
+            lengths[col] = len(first_value)
+
+    # If we found text columns, assign based on length
+    if lengths:
+        # Get column with max length as sentence column
+        sentence_column = max(lengths, key=lengths.get)
+        # Get column with min length as label column
+        label_column = min(lengths, key=lengths.get)
+
+        # If only one column found, it's the sentence column
+        if len(lengths) == 1:
+            label_column = None
 
     return sentence_column, label_column
 
