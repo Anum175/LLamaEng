@@ -13,38 +13,38 @@ https://django-template.vercel.app/
 Our Django application, `example` is configured as an installed application in `api/settings.py`:
 
 ```python
-# api/settings.py
+# project/settings.py
 INSTALLED_APPS = [
     # ...
-    'example',
+    'app',
 ]
 ```
 
 We allow "\*.vercel.app" subdomains in `ALLOWED_HOSTS`, in addition to 127.0.0.1:
 
 ```python
-# api/settings.py
+# project/settings.py
 ALLOWED_HOSTS = ['127.0.0.1', '.vercel.app']
 ```
 
 The `wsgi` module must use a public variable named `app` to expose the WSGI application:
 
 ```python
-# api/wsgi.py
+# project/wsgi.py
 app = get_wsgi_application()
 ```
 
 The corresponding `WSGI_APPLICATION` setting is configured to use the `app` variable from the `api.wsgi` module:
 
 ```python
-# api/settings.py
-WSGI_APPLICATION = 'api.wsgi.app'
+# project/settings.py
+WSGI_APPLICATION = 'project.wsgi.app'
 ```
 
 There is a single view which renders the current time in `example/views.py`:
 
 ```python
-# example/views.py
+# app/views.py
 from datetime import datetime
 
 from django.http import HttpResponse
@@ -66,11 +66,10 @@ def index(request):
 This view is exposed a URL through `example/urls.py`:
 
 ```python
-# example/urls.py
+# app/urls.py
 from django.urls import path
 
-from example.views import index
-
+from app.views import index
 
 urlpatterns = [
     path('', index),
@@ -80,12 +79,12 @@ urlpatterns = [
 Finally, it's made accessible to the Django server inside `api/urls.py`:
 
 ```python
-# api/urls.py
+# project/urls.py
 from django.urls import path, include
 
 urlpatterns = [
     ...
-    path('', include('example.urls')),
+    path('', include('app.urls')),
 ]
 ```
 
