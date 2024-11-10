@@ -1,9 +1,12 @@
 # app/urls.py
 from django.urls import path
 
-from app.views import index
-
+from . import views
 
 urlpatterns = [
-    path('', index),
+    path('', views.index,name='index'),
+    path('text_labelling/', views.text_labelling,name='text_labelling'),
+    path('picture_labelling/', views.picture_labelling,name='picture_labelling'),
+    path('data_preprocessing/', views.data_preprocessing,name='data_preprocessing'),
+
 ]
