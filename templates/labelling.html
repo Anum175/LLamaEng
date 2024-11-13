@@ -621,8 +621,22 @@ uploadContainer.onclick = function(e) {
 imageUploadContainer.onclick = function() {
     imageFile.click();
 };
- document.querySelector('.btn-submit').addEventListener('click', function(event) {
+ // Add this CSS at the beginning of your existing style block
+document.querySelector('.btn-submit').addEventListener('click', function(event) {
     event.preventDefault();
+
+    // Get the button element
+    const submitBtn = this;
+    const originalContent = submitBtn.innerHTML;
+
+    // Change button to loading state
+    submitBtn.innerHTML = `
+        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        Processing...
+    `;
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.7';
+    submitBtn.style.cursor = 'not-allowed';
 
     const formData = new FormData(document.querySelector('form'));
 
@@ -653,10 +667,22 @@ imageUploadContainer.onclick = function() {
         // Cleanup
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+
+        // Reset button state
+        submitBtn.innerHTML = originalContent;
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
     })
     .catch(error => {
         console.error('Error:', error);
         alert('An error occurred while downloading the file.');
+
+        // Reset button state on error
+        submitBtn.innerHTML = originalContent;
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
     });
 });
 </script>{% endblock %}

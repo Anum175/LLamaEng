@@ -46,15 +46,11 @@
             </button>
             <div class="collapse navbar-collapse" id="mainNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Data Labelling</a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="showContent('text-labelling')">Text Labelling</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="showContent('picture-labelling')">Picture Labelling</a></li>
-                        </ul>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'text_labelling' %}">Data Labelling</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url "data_preprocessing" %}">Data Preprocessing</a>
+                        <a class="nav-link {% if request.path == 'data_preprocessing//' %}active{% endif %}" href="{% url 'data_preprocessing' %}">Data Preprocesing</a>
                     </li>
                 </ul>
             </div>

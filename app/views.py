@@ -19,8 +19,6 @@ client = Groq(api_key=api)
 import preprocessor as p
 
 
-def index(request):
-    return render(request, 'labelling.html')
 
 
 def picture_labelling(request):
@@ -76,7 +74,9 @@ def add_to_dataframe(df, text, label):
 
 
 def text_labelling(request):
+    print(request.path)
     if request.method == 'POST':
+
         labels = request.POST.get('labels').split(',')
         file = request.FILES.get('textFile')
         raw_text = request.POST.get('textInput')
