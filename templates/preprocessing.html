@@ -4,7 +4,19 @@
     <link rel="stylesheet" href="{% static 'style2.css' %}">
     <link rel="stylesheet" href="{% static 'style.css' %}">
 {% endblock %}
+<style>
+    .btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 
+#errorContainer {
+    font-size: 14px;
+    margin-top: 10px;
+    padding: 5px;
+    border-radius: 4px;
+}
+</style>
 
     {% block main_content %}
         <div class="container my-5">
@@ -14,12 +26,26 @@
             {% csrf_token %}
             <div class="form-container">
                 <!-- File Upload Section -->
+                <div class="input-section">
+                        <div class="section-title">
+                            <i class="fas fa-file-upload"></i>
+                            Upload Method
+                        </div>
                 <div class="upload-container" onclick="document.getElementById('dataFile').click()">
                     <i class="fas fa-file-upload upload-icon"></i>
                     <h4>Upload Data File</h4>
                     <p class="text-muted">Drag and drop your CSV, Excel, or text file here</p>
                     <input type="file" name="file" class="d-none" id="dataFile" accept=".csv,.xlsx,.txt">
+
                 </div>
+                    <div class="selected-file" id="selectedFile">
+                        <span id="fileName"></span>
+                        <span class="remove-file" onclick="removeFile()">
+                            <i class="fas fa-times"></i>
+                        </span>
+                    </div>
+                </div>
+
 
                 <!-- Preprocessing Options -->
                 <h5 class="mb-3">Preprocessing Options</h5>
@@ -65,6 +91,19 @@
                         </div>
                     </label>
                 </div>
+                <!-- context mode -->
+                <div class="preprocessing-option">
+                    <input type="checkbox" name="checkbox_context" id="contextMode">
+                    <label for="contextMode" class="d-flex align-items-center w-100 mb-0">
+                        <div class="custom-checkbox">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="option-details">
+                            <div class="option-title">Context Mode</div>
+                            <p class="option-description">Replace wrong words with the contextual words</p>
+                        </div>
+                    </label>
+                </div>
 
                 <!-- Submit Button -->
                 <button class="btn btn-submit" type="button" id="submitBtn">
@@ -77,13 +116,13 @@
     {% endblock %}
 
  {% block javascript %}
-
+     
      <script>
       // File Upload Handling
         document.getElementById('dataFile').addEventListener('change', function(e) {
             const fileName = e.target.files[0]?.name;
             if (fileName) {
-                document.querySelector('.upload-container p').textContent = `Selected file: ${fileName}`;
+               showSelectedFile(fileName)
             }
         });
 
@@ -102,74 +141,120 @@
                 e.stopPropagation();
             });
         });
+// Helper function to show messages
+function showMessage(message, type) {
+    // Remove any existing message first
+    const existingMessage = document.querySelector('.message-alert');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
 
-document.getElementById('submitBtn').addEventListener('click', function() {
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = message;
+    messageDiv.className = 'message-alert'; // Add a class for easy identification
+    messageDiv.style.padding = '10px';
+    messageDiv.style.marginTop = '10px';
+    messageDiv.style.borderRadius = '4px';
+    messageDiv.style.textAlign = 'center';
+
+    if (type === 'success') {
+        messageDiv.style.backgroundColor = '#d4edda';
+        messageDiv.style.color = '#155724';
+        messageDiv.style.border = '1px solid #c3e6cb';
+    } else {
+        messageDiv.style.backgroundColor = '#f8d7da';
+        messageDiv.style.color = '#721c24';
+        messageDiv.style.border = '1px solid #f5c6cb';
+    }
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.parentNode.appendChild(messageDiv);
+
+    // Clear the message after delay
+    setTimeout(() => {
+        if (messageDiv.parentNode) {
+            messageDiv.remove();
+        }
+    }, 3000);
+}
+// Frontend JavaScript
+// Frontend JavaScript
+document.getElementById('submitBtn').addEventListener('click', function(e) {
+    e.preventDefault(); // Prevent default button behavior
+
+    // Validate form first
+    validateForm();
+
+    // Check if button is disabled
+    if (this.disabled) {
+        return;
+    }
+
+    // Get form and create FormData
+    const form = document.getElementById('dataPreprocessingForm');
+    const formData = new FormData(form);
+
+    // Append checkbox values
+    formData.append('checkbox_duplicates', document.getElementById('removeDuplicates').checked);
+    formData.append('checkbox_clean', document.getElementById('cleanText').checked);
+    formData.append('checkbox_stopwords', document.getElementById('removeStopwords').checked);
+    formData.append('checkbox_context', document.getElementById('contextMode').checked);
+
     // Show loading indicator
     const loadingIndicator = document.createElement('span');
-    loadingIndicator.textContent = 'Processing...';
+    loadingIndicator.textContent = ' Processing...';
     loadingIndicator.id = 'loadingIndicator';
     this.appendChild(loadingIndicator);
     this.disabled = true;
 
-    const formData = new FormData(document.getElementById('dataPreprocessingForm'));
-    formData.append('checkbox_duplicates', document.getElementById('removeDuplicates').checked);
-    formData.append('checkbox_clean', document.getElementById('cleanText').checked);
-    formData.append('checkbox_stopwords', document.getElementById('removeStopwords').checked);
-
+    // Make the fetch request
     fetch('{% url "data_preprocessing" %}', {
         method: 'POST',
+        body: formData,
         headers: {
             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
         },
-        body: formData
+        credentials: 'same-origin' // Include cookies in the request
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Network response was not ok');
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition');
+        const filename = contentDisposition
+            ? contentDisposition.split('filename=')[1].replace(/"/g, '')
+            : 'processed_data.csv';
+
+        return response.blob().then(blob => ({ blob, filename }));
     })
-    .then(blob => {
-        // Create and trigger download
+    .then(({ blob, filename }) => {
+        // Create a download link and trigger it
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = 'processed_data.csv';
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         a.remove();
 
         // Show success message
-        const successMsg = document.createElement('div');
-        successMsg.textContent = 'Download complete!';
-        successMsg.style.color = 'green';
-        document.getElementById('submitBtn').parentNode.appendChild(successMsg);
-        setTimeout(() => successMsg.remove(), 3000);
+        showMessage('Download complete!', 'success');
     })
     .catch(error => {
         console.error('Error:', error);
-        // Show error message to user
-        const errorMsg = document.createElement('div');
-        errorMsg.textContent = 'Error processing file. Please try again.';
-        errorMsg.style.color = 'red';
-        document.getElementById('submitBtn').parentNode.appendChild(errorMsg);
-        setTimeout(() => errorMsg.remove(), 3000);
+        showMessage('Error processing file. Please try again.', 'error');
     })
     .finally(() => {
         // Remove loading indicator and re-enable button
-        document.getElementById('loadingIndicator')?.remove();
-        document.getElementById('submitBtn').disabled = false;
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+            loadingIndicator.remove();
+        }
+        this.disabled = false;
     });
 });
-// Improved File Upload Handling
-        document.getElementById('dataFile').addEventListener('change', function(e) {
-            const fileName = e.target.files[0]?.name;
-            if (fileName) {
-                document.querySelector('.upload-container p').textContent = `Selected file: ${fileName}`;
-            }
-        });
 
         // Checkbox Handling
         document.querySelectorAll('.preprocessing-option').forEach(option => {
@@ -186,130 +271,143 @@ document.getElementById('submitBtn').addEventListener('click', function() {
                 e.stopPropagation();
             });
         });
-
-        // Form Submission Handler
-        document.querySelector('.btn-submit').addEventListener('click', function(e) {
-            e.preventDefault();
-
-            const selectedOptions = {
-                removeDuplicates: document.getElementById('removeDuplicates').checked,
-                cleanText: document.getElementById('cleanText').checked,
-                removeStopwords: document.getElementById('removeStopwords').checked,
-                inputMethod: document.getElementById('dataFile').files.length > 0 ? 'file' : 'text',
-                data: document.getElementById('dataFile').files.length > 0
-                    ? document.getElementById('dataFile').files[0].name
-                    : document.querySelector('textarea').value
-            };
-
-            console.log('Form submission:', selectedOptions);
-            // Add your form submission logic here
-        });
-        // File preview functionality
+// Get DOM elements
+const dataFile = document.getElementById('dataFile');
+const selectedFile = document.getElementById('selectedFile');
+const fileName = document.getElementById('fileName');
 const uploadContainer = document.querySelector('.upload-container');
-const dataFileInput = document.getElementById('dataFile');
-const rawDataInput = document.querySelector('textarea');
-const originalUploadText = uploadContainer.querySelector('p').textContent;
 
-// Function to reset file upload
-function resetFileUpload() {
-    dataFileInput.value = '';
-    uploadContainer.querySelector('p').textContent = originalUploadText;
-    uploadContainer.classList.remove('disabled');
-    uploadContainer.style.cursor = 'pointer';
-    dataFileInput.disabled = false;
+// File Selection Event Handler
+dataFile.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        // Display selected filename
+        fileName.textContent = e.target.files[0].name;
+        selectedFile.classList.add('active');
 
-    // Create or update selected file div
-    let selectedFileDiv = document.querySelector('.selected-file');
-    if (selectedFileDiv) {
-        selectedFileDiv.style.display = 'none';
-    }
-}
-
-// Function to reset text area
-function resetTextArea() {
-    rawDataInput.value = '';
-    rawDataInput.disabled = false;
-}
-
-// Function to show selected file
-function showSelectedFile(fileName) {
-    // Create or get selected file div
-    let selectedFileDiv = document.querySelector('.selected-file');
-    if (!selectedFileDiv) {
-        selectedFileDiv = document.createElement('div');
-        selectedFileDiv.className = 'selected-file';
-        selectedFileDiv.innerHTML = `
-            <div class="d-flex align-items-center justify-content-between p-2 mt-3 bg-light rounded">
-                <span class="selected-file-name"></span>
-                <button type="button" class="btn btn-sm btn-danger remove-file">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-        uploadContainer.insertAdjacentElement('afterend', selectedFileDiv);
-    }
-
-    // Update file name and show the div
-    selectedFileDiv.querySelector('.selected-file-name').textContent = `Selected file: ${fileName}`;
-    selectedFileDiv.style.display = 'block';
-
-    // Add click handler to remove button
-    selectedFileDiv.querySelector('.remove-file').onclick = function(e) {
-        e.stopPropagation();
-        resetFileUpload();
-        rawDataInput.disabled = false;
-    };
-}
-
-// Handle file selection
-dataFileInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        // Disable text area
-        rawDataInput.value = '';
-        rawDataInput.disabled = true;
-
-        // Update upload container
+        // Disable upload container
         uploadContainer.classList.add('disabled');
-        uploadContainer.style.cursor = 'not-allowed';
-        uploadContainer.querySelector('p').textContent = 'File selected';
-
-        // Show selected file
-        showSelectedFile(file.name);
-    }
-});
-
-// Handle text area input
-rawDataInput.addEventListener('input', function(e) {
-    if (e.target.value) {
-        // Disable file upload
-        uploadContainer.classList.add('disabled');
-        uploadContainer.style.cursor = 'not-allowed';
-        dataFileInput.disabled = true;
-        resetFileUpload();
+        uploadContainer.style.pointerEvents = 'none';
+        uploadContainer.style.opacity = '0.6';
     } else {
-        // Re-enable file upload
-        uploadContainer.classList.remove('disabled');
-        uploadContainer.style.cursor = 'pointer';
-        dataFileInput.disabled = false;
+        enableAllInputs();
     }
 });
 
-// Checkbox selection handling
-document.querySelectorAll('.preprocessing-option').forEach(option => {
-    const checkbox = option.querySelector('input[type="checkbox"]');
-
-    option.addEventListener('click', function(e) {
-        if (e.target !== checkbox) {
-            checkbox.checked = !checkbox.checked;
-            checkbox.dispatchEvent(new Event('change'));
-        }
-    });
-
-    checkbox.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
+// Make sure clicking on upload container triggers file input
+uploadContainer.addEventListener('click', () => {
+    if (!uploadContainer.classList.contains('disabled')) {
+        dataFile.click();
+    }
 });
+
+function removeFile(e) {
+    // Prevent event from bubbling up to parent elements
+    if (e) {
+        e.stopPropagation();
+    }
+
+    // Clear file input and reset UI
+    dataFile.value = '';
+    selectedFile.classList.remove('active');
+    fileName.textContent = '';
+
+    // Re-enable upload container
+    uploadContainer.classList.remove('disabled');
+    uploadContainer.style.pointerEvents = 'auto';
+    uploadContainer.style.opacity = '1';
+    validateForm();
+}
+
+function enableAllInputs() {
+    dataFile.disabled = false;
+    uploadContainer.classList.remove('disabled');
+    uploadContainer.style.pointerEvents = 'auto';
+    uploadContainer.style.opacity = '1';
+}
+
+function disableFileInput() {
+    dataFile.value = '';
+    selectedFile.classList.remove('active');
+    fileName.textContent = '';
+    uploadContainer.classList.add('disabled');
+    uploadContainer.style.pointerEvents = 'none';
+    uploadContainer.style.opacity = '0.6';
+}
+
+// Add click handler for the remove file button
+document.querySelector('.remove-file').addEventListener('click', removeFile);
+// Single click handler for upload containers
+uploadContainer.onclick = function(e) {
+    if (!uploadContainer.classList.contains('disabled') && !textInput.value) {
+        textFile.click();
+    }
+};
+// validate form code
+      // Get DOM elements
+const submitBtn = document.getElementById('submitBtn');
+const checkboxes = document.querySelectorAll('.preprocessing-option input[type="checkbox"]');
+
+// Function to validate form with debounce
+let validateTimeout = null;
+function validateForm() {
+    const dataFile = document.getElementById('dataFile');
+    const submitBtn = document.getElementById('submitBtn');
+    const checkboxes = document.querySelectorAll('.preprocessing-option input[type="checkbox"]');
+
+    const isFileSelected = dataFile.files.length > 0;
+    const isAnyCheckboxChecked = Array.from(checkboxes).some(checkbox => checkbox.checked);
+
+    // Clear any existing timeout
+    if (validateTimeout) {
+        clearTimeout(validateTimeout);
+    }
+
+    // Set new timeout
+    validateTimeout = setTimeout(() => {
+        if (!isFileSelected || !isAnyCheckboxChecked) {
+            submitBtn.classList.add('disabled');
+            submitBtn.disabled = true;
+
+            const errorMessages = [];
+            if (!isFileSelected) errorMessages.push('Please select a file');
+            if (!isAnyCheckboxChecked) errorMessages.push('Please select at least one preprocessing option');
+
+            showMessage(errorMessages.join(' and '), 'error');
+            return false;
+        }
+
+        submitBtn.classList.remove('disabled');
+        submitBtn.disabled = false;
+
+        // Remove any existing error message when validation passes
+        const existingMessage = document.querySelector('.message-alert');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+
+        return true;
+    }, 100); // Small delay to prevent multiple rapid validations
+}
+
+
+// Remove any existing listeners before adding new ones
+function addValidationListeners() {
+    // File input listener
+    dataFile.removeEventListener('change', validateForm);
+    dataFile.addEventListener('change', validateForm);
+
+    // Checkbox listeners
+    checkboxes.forEach(checkbox => {
+        checkbox.removeEventListener('change', validateForm);
+        checkbox.addEventListener('change', validateForm);
+    });
+}
+
+// Add the listeners
+addValidationListeners();
+
+// Initial validation
+validateForm();
 
      </script>
  {% endblock %}

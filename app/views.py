@@ -13,12 +13,11 @@ from django.http import HttpResponse
 import nltk
 import json
 import dotenv
+
 dotenv.load_dotenv()
 api = os.environ.get("API_KEY")
 client = Groq(api_key=api)
 import preprocessor as p
-
-
 
 
 def picture_labelling(request):
@@ -76,6 +75,7 @@ def add_to_dataframe(df, text, label):
 def text_labelling(request):
     print(request.path)
     if request.method == 'POST':
+        print('text labelling')
 
         labels = request.POST.get('labels').split(',')
         file = request.FILES.get('textFile')
@@ -142,45 +142,46 @@ def data_preprocessing(request):
             remove_duplicates = request.POST.get('checkbox_duplicates') == 'true'
             clean_text = request.POST.get('checkbox_clean') == 'true'
             remove_stopwords = request.POST.get('checkbox_stopwords') == 'true'
+            context_mode = request.POST.get('checkbox_context') == 'true'
 
-            # Determine file type and load data
+            # Validate and read the file with explicit encoding
             if uploaded_file and uploaded_file.name.endswith('.csv'):
-                df = pd.read_csv(uploaded_file)
+                df = pd.read_csv(uploaded_file, encoding='utf-8')
             elif uploaded_file and uploaded_file.name.endswith('.xlsx'):
                 df = pd.read_excel(uploaded_file)
             else:
-                return JsonResponse({'error': 'Unsupported file format.'})
+                return JsonResponse({'error': 'Unsupported file format.'}, status=400)
 
             # Identify the sentence column
             sentence_column, _ = identify_columns(df)
-            print(sentence_column)
             if not sentence_column:
-                return JsonResponse({'error': 'Could not identify the sentence column.'})
+                return JsonResponse({'error': 'Could not identify the sentence column.'}, status=400)
 
             # Apply preprocessing options
             if remove_duplicates:
                 df = remove_duplicates_func(df)
-
             if clean_text:
                 df[sentence_column] = df[sentence_column].apply(
-                    lambda x: find_unknown_words(str(x)) if pd.notnull(x) else x
+                    lambda x: clean_text_func(str(x)) if pd.notnull(x) else x
                 )
-
             if remove_stopwords:
                 df[sentence_column] = df[sentence_column].apply(remove_stopwords_func)
+            if context_mode:
+                df[sentence_column] = df[sentence_column].apply(lambda x: f"Processed Context for: {x}")
 
-            # Create the CSV response
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename="processed_data.csv"'
+            # Create the CSV response with explicit encoding
+            response = HttpResponse(content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = 'attachment; filename="processed_data.csv"'
 
-            # Convert DataFrame to CSV without index
-            csv_data = df.to_csv(index=False, encoding='utf-8-sig')
-            response.write(csv_data)
+            # Add BOM for Excel compatibility
+            response.write(u'\ufeff')
 
+            # Write CSV with explicit encoding
+            df.to_csv(response, index=False, encoding='utf-8')
             return response
 
         except Exception as e:
-            return JsonResponse({'error': str(e)})
+            return JsonResponse({'error': f"An error occurred: {str(e)}"}, status=500)
 
     return render(request, 'preprocessing.html')
 

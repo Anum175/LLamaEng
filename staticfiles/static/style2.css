@@ -1,60 +1,6 @@
- :root {
-            --primary-color: #7289da;
-            --secondary-color: #f6f8ff;
-            --accent-color: #5865f2;
-            --gradient-start: #8e2de2;
-            --gradient-end: #4a00e0;
-            --text-primary: #2c3e50;
-            --card-bg: rgba(255, 255, 255, 0.95);
-        }
 
-        body {
-            background: linear-gradient(135deg, #f6f8ff 0%, #f1f5ff 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            margin: 0;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-        }
 
-        .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-        }
 
-        .form-container {
-            background: var(--card-bg);
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            margin: 2rem 0;
-        }
-
-        .upload-container {
-            background: linear-gradient(135deg, #f6f8ff 0%, #f1f5ff 100%);
-            border: 2px dashed var(--accent-color);
-            border-radius: 15px;
-            padding: 2rem;
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            margin-bottom: 2rem;
-        }
-
-        .upload-container:hover {
-            background: linear-gradient(135deg, #f1f5ff 0%, #e8ecff 100%);
-            transform: scale(1.02);
-        }
-
-        .upload-icon {
-            font-size: 3rem;
-            color: var(--accent-color);
-            margin-bottom: 1rem;
-        }
 
         /* Modern Checkbox Styling */
         .preprocessing-option {
@@ -119,54 +65,6 @@
             color: #666;
             margin: 0;
         }
-        /* File Preview Styles */
-.file-preview-container {
-    transition: all 0.3s ease;
-}
-
-.file-preview {
-    animation: slideDown 0.3s ease;
-}
-
-.file-preview .card {
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    transition: all 0.3s ease;
-}
-
-.file-preview .card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.file-icon {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background: rgba(88, 101, 242, 0.1);
-}
-
-.file-name {
-    margin: 0;
-    font-weight: 500;
-    color: var(--text-primary);
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.remove-file {
-    opacity: 0.7;
-    transition: all 0.2s ease;
-}
-
-.remove-file:hover {
-    opacity: 1;
-    transform: scale(1.1);
-}
 
 @keyframes slideDown {
     from {
@@ -258,15 +156,6 @@
     pointer-events: none;
 }
 
-.selected-file {
-    display: none;
-    margin-top: 1rem;
-}
-
-.selected-file .selected-file-name {
-    word-break: break-all;
-    margin-right: 1rem;
-}
 
 textarea:disabled {
     background-color: #f8f9fa;
@@ -274,9 +163,37 @@ textarea:disabled {
     cursor: not-allowed;
 }
 
-.remove-file {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    border-radius: 0.2rem;
+
+.upload-container {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+    position: relative;
 }
+
+.upload-container:hover:not(.disabled) {
+    border-color: #0d6efd;
+    background-color: #f1f7ff;
+}
+
+.upload-container.dragover {
+    border-color: #0d6efd;
+    background-color: #e7f1ff;
+}
+
+.upload-container.disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.upload-icon {
+    font-size: 2rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+
+

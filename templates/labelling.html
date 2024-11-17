@@ -398,7 +398,7 @@
                     </div>
                     <div class="mb-4">
                         <label class="form-label">Classes</label>
-                        <input type="text" name="labels" class="form-control" placeholder="Enter classes (comma-separated)">
+                        <input type="text" name="labels" class="form-control" placeholder="Enter classes (comma-separated)" required="required">
                     </div>
                 </div>
 
@@ -410,44 +410,7 @@
             </div>
         </div>
             </form>
-        <!-- Picture Labelling Section -->
-        <form action="" method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-        <div id="picture-labelling" class="content">
-            <h2 class="mb-4 text-center">Picture Labelling</h2>
-            <div class="form-container">
-                <div class="input-section">
-                    <div class="section-title">
-                        <i class="fas fa-images"></i>
-                        Upload Images
-                    </div>
-                    <div class="upload-container">
-                        <i class="fas fa-images upload-icon"></i>
-                        <h4>Upload Images</h4>
-                        <p class="text-muted">Drag and drop your images here or click to browse</p>
-                        <input type="file" class="d-none" id="imageFile" accept="image/*" multiple>
-                    </div>
-                </div>
 
-                <div class="input-section">
-                    <div class="section-title">
-                        <i class="fas fa-tags"></i>
-                        Classification
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label">Classes</label>
-                        <input type="text" class="form-control" placeholder="Enter classes (comma-separated)">
-                    </div>
-                </div>
-
-                <div class="text-center mt-4">
-                    <button class="btn btn-submit">
-                        <i class="fas fa-paper-plane me-2"></i>Submit Data
-                    </button>
-                </div>
-            </div>
-        </div>
-            </form>
     </div>
 
   {% endblock %}
@@ -471,32 +434,6 @@ const fileName = document.getElementById('fileName');
 const fileInputMethod = document.getElementById('fileInputMethod');
 const textInputMethod = document.getElementById('textInputMethod');
 const uploadContainer = document.querySelector('.upload-container');
-
-// Image upload handling
-const imageFile = document.getElementById('imageFile');
-const imageUploadContainer = document.querySelector('#picture-labelling .upload-container');
-let imageCountDisplay = document.createElement('div');
-imageCountDisplay.className = 'selected-images-count mt-3';
-imageUploadContainer.insertAdjacentElement('afterend', imageCountDisplay);
-
-function updateImageCount(files) {
-    if (files.length > 0) {
-        imageCountDisplay.innerHTML = `
-            <div class="alert alert-info">
-                <i class="fas fa-images me-2"></i>
-                ${files.length} image${files.length > 1 ? 's' : ''} selected
-            </div>`;
-    } else {
-        imageCountDisplay.innerHTML = `
-            <div class="alert alert-secondary">
-                <i class="fas fa-image me-2"></i>
-                No files chosen
-            </div>`;
-    }
-}
-
-// Initialize with "No files chosen" message
-updateImageCount([]);
 
 function disableTextInput() {
     textInput.value = '';
@@ -548,10 +485,7 @@ function removeFile() {
     enableAllInputs();
 }
 
-// Image file event listener
-imageFile.addEventListener('change', (e) => {
-    updateImageCount(e.target.files);
-});
+
 
 // Drag and drop handling for text files
 uploadContainer.addEventListener('dragover', (e) => {
@@ -586,30 +520,6 @@ uploadContainer.addEventListener('drop', (e) => {
     }
 });
 
-// Drag and drop handling for images
-imageUploadContainer.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    imageUploadContainer.style.borderColor = 'var(--accent-color)';
-    imageUploadContainer.style.backgroundColor = 'rgba(88, 101, 242, 0.1)';
-});
-
-imageUploadContainer.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    imageUploadContainer.style.borderColor = '';
-    imageUploadContainer.style.backgroundColor = '';
-});
-
-imageUploadContainer.addEventListener('drop', (e) => {
-    e.preventDefault();
-    imageUploadContainer.style.borderColor = '';
-    imageUploadContainer.style.backgroundColor = '';
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        imageFile.files = files;
-        updateImageCount(files);
-    }
-});
 
 // Single click handler for upload containers
 uploadContainer.onclick = function(e) {
@@ -621,13 +531,31 @@ uploadContainer.onclick = function(e) {
 imageUploadContainer.onclick = function() {
     imageFile.click();
 };
- // Add this CSS at the beginning of your existing style block
-document.querySelector('.btn-submit').addEventListener('click', function(event) {
-    event.preventDefault();
+ // Move this function outside the click event handler
+function handleSubmission() {
+    const textFile = document.getElementById('textFile');
+    const textInput = document.getElementById('textInput');
+    const classesInput = document.querySelector('input[name="labels"]');
+    const submitBtn = document.querySelector('.btn-submit');
+    const selectedFile = document.getElementById('selectedFile');
+    const fileName = document.getElementById('fileName');
 
-    // Get the button element
-    const submitBtn = this;
+    const hasFile = textFile.files.length > 0;
+    const hasText = textInput.value.trim() !== '';
+    const hasClasses = classesInput.value.trim() !== '';
+
+    // Store original button content
     const originalContent = submitBtn.innerHTML;
+
+    if (!hasClasses) {
+        alert('Please enter at least one class');
+        return false;
+    }
+
+    if (!hasFile && !hasText) {
+        alert('Please either upload a file or enter text');
+        return false;
+    }
 
     // Change button to loading state
     submitBtn.innerHTML = `
@@ -638,9 +566,26 @@ document.querySelector('.btn-submit').addEventListener('click', function(event) 
     submitBtn.style.opacity = '0.7';
     submitBtn.style.cursor = 'not-allowed';
 
-    const formData = new FormData(document.querySelector('form'));
+    return {
+        submitBtn,
+        originalContent,
+        selectedFile,
+        fileName
+    };
+}
 
-    fetch('{% url "text_labelling" %}', {
+// Add event listener to form instead of button
+document.querySelector('form').addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    const submission = handleSubmission();
+    if (!submission) return; // Validation failed
+
+    const { submitBtn, originalContent, selectedFile, fileName } = submission;
+
+    const formData = new FormData(this);
+
+    fetch(this.action, {
         method: 'POST',
         body: formData,
         headers: {
@@ -673,6 +618,14 @@ document.querySelector('.btn-submit').addEventListener('click', function(event) 
         submitBtn.disabled = false;
         submitBtn.style.opacity = '1';
         submitBtn.style.cursor = 'pointer';
+
+        // Reset form
+        this.reset();
+        if (selectedFile && selectedFile.classList.contains('active')) {
+            selectedFile.classList.remove('active');
+            if (fileName) fileName.textContent = '';
+        }
+        enableAllInputs();
     })
     .catch(error => {
         console.error('Error:', error);
