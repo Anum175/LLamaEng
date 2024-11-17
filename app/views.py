@@ -167,7 +167,9 @@ def data_preprocessing(request):
             if remove_stopwords:
                 df[sentence_column] = df[sentence_column].apply(remove_stopwords_func)
             if context_mode:
-                df[sentence_column] = df[sentence_column].apply(lambda x: f"Processed Context for: {x}")
+                df[sentence_column] = df[sentence_column] = df[sentence_column].apply(
+                    lambda x: find_unknown_words(str(x)) if pd.notnull(x) else x
+                )
 
             # Create the CSV response with explicit encoding
             response = HttpResponse(content_type='text/csv; charset=utf-8')
