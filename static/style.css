@@ -1,15 +1,40 @@
 :root {
-            --primary-color: #7289da;
-            --secondary-color: #f6f8ff;
-            --accent-color: #5865f2;
-            --gradient-start: #8e2de2;
-            --gradient-end: #4a00e0;
-            --text-primary: #2c3e50;
-            --card-bg: rgba(255, 255, 255, 0.95);
-        }
+    /* Light Theme Variables */
+    --primary-color: #7289da;
+    --secondary-color: #f6f8ff;
+    --accent-color: #5865f2;
+    --gradient-start: #8e2de2;
+    --gradient-end: #4a00e0;
+    --text-primary: #2c3e50;
+    --text-secondary: #64748b;
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --bg-color: #f6f8ff;
+    --nav-bg: rgba(255, 255, 255, 0.95);
+    --border-color: rgba(255, 255, 255, 0.3);
+    --input-bg: #ffffff;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --hover-bg: rgba(88, 101, 242, 0.05);
+}
 
+[data-theme="dark"] {
+    --primary-color: #7289da;
+    --secondary-color: #1a1d24;
+    --accent-color: #5865f2;
+    --gradient-start: #4a00e0;
+    --gradient-end: #8e2de2;
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+    --card-bg: rgba(30, 32, 40, 0.95);
+    --bg-color: #0f1117;
+    --nav-bg: rgba(30, 32, 40, 0.95);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --input-bg: #1a1d24;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --hover-bg: rgba(88, 101, 242, 0.1);
+
+}
         body {
-            background: linear-gradient(135deg, #f6f8ff 0%, #f1f5ff 100%);
+            background: white;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -338,3 +363,79 @@
         .input-method.active {
             background: rgba(88, 101, 242, 0.1);
         }
+        [data-theme="dark"] {
+    --primary-color: #7289da;
+    --secondary-color: #2c2f33;
+    --accent-color: #5865f2;
+    --gradient-start: #4a00e0;
+    --gradient-end: #8e2de2;
+    --text-primary: #ffffff;
+    --card-bg: rgba(30, 32, 40, 0.95);
+    --bg-color: #1a1a1a;
+    --nav-bg: rgba(30, 32, 40, 0.95);
+}
+
+/* Apply dark mode to body */
+body {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+
+.theme-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+}
+
+.theme-toggle .icon {
+    width: 24px;
+    height: 24px;
+    color: var(--accent-color);
+    transition: transform 0.5s ease;
+}
+
+.theme-toggle.dark .icon {
+    transform: rotate(360deg);
+}
+
+/* Update navbar for dark mode */
+.navbar {
+    background: var(--nav-bg);
+    transition: background-color 0.3s ease;
+}
+
+/* Update cards and other elements */
+.form-container {
+    background: var(--card-bg);
+    transition: background-color 0.3s ease;
+}
+
+.footer {
+    background: var(--nav-bg);
+    transition: background-color 0.3s ease;
+}
+
+/* Add transitions to all relevant elements */
+.nav-link,
+.navbar-brand,
+input,
+textarea,
+.btn {
+    transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .theme-toggle {
+        bottom: 1.5rem;
+        right: 1.5rem;
+        width: 42px;
+        height: 42px;
+    }
+
+    .theme-toggle .icon {
+        width: 20px;
+        height: 20px;
+    }
+}
