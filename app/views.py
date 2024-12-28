@@ -17,8 +17,7 @@ import preprocessor as p
 from nltk import sent_tokenize
 
 nltk_data_dir = './static/nltk_data'
-nltk.download('punkt', download_dir=nltk_data_dir)
-nltk.download('punkt_tab', download_dir=nltk_data_dir)
+
 dotenv.load_dotenv()
 api = os.environ.get("API_KEY")
 client = Groq(api_key=api)
