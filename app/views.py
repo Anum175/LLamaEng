@@ -13,12 +13,15 @@ from django.http import HttpResponse
 import nltk
 import json
 import dotenv
+import preprocessor as p
+from nltk import sent_tokenize
 
+nltk_data_dir = './static/nltk_data'
+nltk.download('punkt', download_dir=nltk_data_dir)
+nltk.download('punkt_tab', download_dir=nltk_data_dir)
 dotenv.load_dotenv()
 api = os.environ.get("API_KEY")
 client = Groq(api_key=api)
-import preprocessor as p
-
 
 def picture_labelling(request):
     return render(request, 'labelling.html')
@@ -40,48 +43,68 @@ def split_text_by_newline(text):
     return [line.strip() for line in text.splitlines() if line.strip()]
 
 
-# 3. Function to generate label
-def generate_label_for_text(text, labels):
-    chat_completion = client.chat.completions.create(
+# 1. Split text into sentences or lines dynamically
+def split_text(input_text):
+    """
+    Splits the input into sentences or lines based on input format.
+    Handles both paragraphs and separated lines.
+    """
+    if '\n' in input_text:  # If newlines are present, treat as separated lines
+        return [line.strip() for line in input_text.splitlines() if line.strip()]
+    else:  # Otherwise, treat as paragraph and split into sentences
+        return sent_tokenize(input_text)
+
+# 2. Generate labels for a batch of sentences
+def generate_labels_for_batch(sentences, labels):
+    """
+    Sends a batch of sentences to the LLM API for labeling.
+    """
+    input_text = "\n".join(sentences)
+    response = client.chat.completions.create(
         messages=[
             {
                 "role": "system",
-                "content": f"You are a data labeling tool. Classify each sentence strictly according to the provided labels. If no label matches, classify as 'Other'. Do not provide explanations or comments. Here are the labels: {labels}"
+                "content": (
+                    f"You are a data labeling tool. Classify each sentence strictly according to the provided labels. "
+                    f"If no label matches, classify as 'Other'. Do not provide explanations or comments. "
+                    f"Here are the labels: {labels}"
+                ),
             },
             {
                 "role": "user",
-                "content": f"{text}"
-            }
+                "content": input_text,
+            },
         ],
         model="llama3-8b-8192",
         temperature=0.2,
-        max_tokens=4,
+        max_tokens=len(sentences) * 10,
         top_p=1,
-        stop=None,
         stream=False,
     )
-    return chat_completion.choices[0].message.content
+    # Parse the response to extract labels for each sentence
+    labels_output = response.choices[0].message.content.splitlines()
+    return [{"Text": sent, "Label": lbl} for sent, lbl in zip(sentences, labels_output)]
 
-
-# 4. Function to add labeled data to DataFrame
-def add_to_dataframe(df, text, label):
-    new_row = {"Text": text, "Label": label}
-    return pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-
+# 3. Extract text from uploaded file
+def extract_text_from_file(file):
+    """
+    Extracts text content from an uploaded file.
+    """
+    return file.read().decode('utf-8')
 
 # Main View Function
-
-
 def text_labelling(request):
-    print(request.path)
+    """
+    Handles the text labeling view logic.
+    """
     if request.method == 'POST':
-        print('text labelling')
+        # Step 1: Get input labels and text
+        labels = request.POST.get('labels').split(',')  # Example: ['Label1', 'Label2', 'Other']
+        print('labels',labels)
+        file = request.FILES.get('textFile')  # Uploaded file
+        raw_text = request.POST.get('textInput')  # Raw text input
 
-        labels = request.POST.get('labels').split(',')
-        file = request.FILES.get('textFile')
-        raw_text = request.POST.get('textInput')
-
-        # Step 1: Extract text from file if provided, else use input text
+        # Step 2: Extract and preprocess text
         if file:
             text = extract_text_from_file(file)
         elif raw_text:
@@ -89,33 +112,34 @@ def text_labelling(request):
         else:
             return JsonResponse({"error": "No text input or file provided."}, status=400)
 
-        # Step 2: Split text into chunks
-        split_texts = split_text_by_newline(text)
+        # Step 3: Split text into sentences or lines
+        sentences = split_text(text)
 
-        # Create CSV in memory
+        # Step 4: Batch process sentences
+        batch_size = 10  # Define batch size
+        results = []
+        for i in range(0, len(sentences), batch_size):
+            batch = sentences[i:i + batch_size]  # Slice batch
+            batch_labels = generate_labels_for_batch(batch, labels)  # Call LLM API
+            results.extend(batch_labels)
+
+        # Step 5: Convert results to DataFrame
+        df = pd.DataFrame(results)
+
+        # Step 6: Write DataFrame to CSV
         csv_buffer = StringIO()
-        csv_writer = csv.writer(csv_buffer, quoting=csv.QUOTE_ALL)
+        df.to_csv(csv_buffer, index=False)
 
-        # Write header
-        csv_writer.writerow(['Text', 'Label'])
-
-        # Write data rows
-        for split_text in split_texts:
-            label = generate_label_for_text(split_text, labels=labels)
-            csv_writer.writerow([split_text, label])
-
-        # Create the HTTP response with CSV content
+        # Step 7: Create HTTP response with CSV content
         response = HttpResponse(
-            content=csv_buffer.getvalue().encode('utf-8-sig'),
+            content=csv_buffer.getvalue(),
             content_type='text/csv; charset=utf-8-sig'
         )
         response['Content-Disposition'] = 'attachment; filename="labeled_data.csv"'
-
         return response
 
+    # Render the HTML page for text labeling
     return render(request, 'labelling.html')
-
-
 # data pre processing code starts from here
 
 
