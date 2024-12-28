@@ -1,6 +1,5 @@
 import csv
 import os
-# hasnain Muavia author
 import pandas as pd
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
